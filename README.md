@@ -54,6 +54,8 @@
 
 ## Install
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/tiaanduplessis/pkg-rename.svg)](https://greenkeeper.io/)
+
 ```sh
 $ npm -g install @tiaanduplessis/pkg-rename
 # OR
