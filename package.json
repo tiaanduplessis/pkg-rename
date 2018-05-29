@@ -1,6 +1,6 @@
 {
   "name": "@tiaanduplessis/pkg-rename",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI to rename a npm package",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,9 @@
   "bin": {
     "pkg-rename": "index.js"
   },
-  "files": ["index.js"],
+  "files": [
+    "index.js"
+  ],
   "scripts": {
     "lint": "standard --fix index.js",
     "test": "npm run lint",
