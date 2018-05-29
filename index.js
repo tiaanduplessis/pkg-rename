@@ -13,25 +13,31 @@ async function deprecatePrevName ({ oldName, publish }) {
   const result = await readPkgUp()
 
   if (!version) {
-    console.log(`${oldName} does not exist in the registry`)
+    console.error(`${oldName} does not exist in the registry`)
     return
   }
 
   if (result.pkg && result.pkg.name) {
-    const deprecateResult = await sh(
-      `npm deprecate ${oldName}@"<=${version}" "WARNING: This project has been renamed to ${result
-        .pkg.name}. Install using ${result.pkg.name} instead."`
-    )
 
-    if (deprecateResult.code === 0) {
-      console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
-
-      if (publish) {
-        await sh('npm publish')
+    try {
+      const deprecateResult = await sh(
+        `npm deprecate ${oldName}@"<=${version}" "WARNING: This project has been renamed to ${result
+          .pkg.name}. Install using ${result.pkg.name} instead."`
+      )
+  
+      if (deprecateResult.code === 0) {
+        console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
+  
+        if (publish) {
+          await sh('npm publish')
+        }
       }
+    } catch(error) {
+      console.error(error)
     }
+
   } else {
-    console.log(
+    console.error(
       `package.json could not be found. Please make sure you are in the correct directory`
     )
   }
