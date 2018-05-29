@@ -18,24 +18,22 @@ async function deprecatePrevName ({ oldName, publish }) {
   }
 
   if (result.pkg && result.pkg.name) {
-
     try {
       const deprecateResult = await sh(
         `npm deprecate ${oldName}@"<=${version}" "WARNING: This project has been renamed to ${result
           .pkg.name}. Install using ${result.pkg.name} instead."`
       )
-  
+
       if (deprecateResult.code === 0) {
         console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
-  
+
         if (publish) {
           await sh('npm publish')
         }
       }
-    } catch(error) {
+    } catch (error) {
       console.error(error)
     }
-
   } else {
     console.error(
       `package.json could not be found. Please make sure you are in the correct directory`
