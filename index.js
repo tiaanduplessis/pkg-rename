@@ -4,7 +4,8 @@
 const latestVersion = require('latest-version')
 const isInstalled = require('is-installed')
 const readPkgUp = require('read-pkg-up')
-const sh = require('shell-exec')
+const shellExec = require('shell-exec')
+const sh = typeof shellExec === 'function' ? shellExec : shellExec.default
 const args = require('get-them-args')()
 const oldName = args.old || args.unknown[0]
 
@@ -28,11 +29,21 @@ async function deprecatePrevName ({ oldName, publish }) {
         console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
 
         if (publish) {
-          await sh('npm publish')
+          const publishResult = await sh('npm publish')
+
+          if (publishResult.error || publishResult.code !== 0) {
+            console.error(
+              publishResult.error || publishResult.stderr || publishResult.stdout || 'npm publish failed'
+            )
+            process.exitCode = typeof publishResult.code === 'number' && publishResult.code > 0
+              ? publishResult.code
+              : 1
+          }
         }
       }
     } catch (error) {
       console.error(error)
+      process.exitCode = 1
     }
   } else {
     console.error(

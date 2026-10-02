@@ -17,8 +17,8 @@
     "index.js"
   ],
   "scripts": {
-    "lint": "standard --fix index.js",
-    "test": "npm run lint",
+    "lint": "standard index.js test/*.js",
+    "test": "npm run lint && node test/index.js",
     "precommit": "npm test"
   },
   "author": "Tiaan du Plessis",

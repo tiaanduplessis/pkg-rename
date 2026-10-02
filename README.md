@@ -47,6 +47,10 @@ You can also publish directly after:
 $ pkg-rename old-package-name --publish
 ```
 
+If publishing fails, the error is reported and the command exits with a nonzero
+status. The old package has already been deprecated; this is not undone when
+publishing fails.
+
 
 ## Contribute
 
@@ -58,4 +62,3 @@ $ pkg-rename old-package-name --publish
 ## License
 
 MIT
-    
