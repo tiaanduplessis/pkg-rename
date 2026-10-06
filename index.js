@@ -25,20 +25,28 @@ async function deprecatePrevName ({ oldName, publish }) {
           .pkg.name}. Install using ${result.pkg.name} instead."`
       )
 
-      if (deprecateResult.code === 0) {
-        console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
+      if (deprecateResult.error || deprecateResult.code !== 0) {
+        console.error(
+          deprecateResult.error || deprecateResult.stderr || deprecateResult.stdout || 'npm deprecate failed'
+        )
+        process.exitCode = typeof deprecateResult.code === 'number' && deprecateResult.code > 0
+          ? deprecateResult.code
+          : 1
+        return
+      }
 
-        if (publish) {
-          const publishResult = await sh('npm publish')
+      console.log(`Successfully deprecated <=${version} versions of ${oldName}.`)
 
-          if (publishResult.error || publishResult.code !== 0) {
-            console.error(
-              publishResult.error || publishResult.stderr || publishResult.stdout || 'npm publish failed'
-            )
-            process.exitCode = typeof publishResult.code === 'number' && publishResult.code > 0
-              ? publishResult.code
-              : 1
-          }
+      if (publish) {
+        const publishResult = await sh('npm publish')
+
+        if (publishResult.error || publishResult.code !== 0) {
+          console.error(
+            publishResult.error || publishResult.stderr || publishResult.stdout || 'npm publish failed'
+          )
+          process.exitCode = typeof publishResult.code === 'number' && publishResult.code > 0
+            ? publishResult.code
+            : 1
         }
       }
     } catch (error) {
