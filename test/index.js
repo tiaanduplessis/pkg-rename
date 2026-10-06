@@ -26,15 +26,21 @@ async function run (options = {}) {
     },
     'read-pkg-up': async () => ({ pkg: { name: 'new-package' } }),
     'get-them-args': () => ({ unknown: ['old-package'], publish: options.publish !== false }),
-    'shell-exec': async command => {
+    'shell-exec': command => {
       commands.push(command)
       if (commands.length === 1) {
-        return { code: options.deprecateCode || 0 }
+        if (options.deprecateThrow) {
+          throw options.deprecateThrow
+        }
+        if (options.deprecateError) {
+          return Promise.reject(options.deprecateError)
+        }
+        return options.deprecateResult || { code: 0, stdout: '', stderr: '' }
       }
       assert.strictEqual(command, 'npm publish')
       assert.strictEqual(commands.length, 2)
       if (options.publishError) {
-        throw options.publishError
+        return Promise.reject(options.publishError)
       }
       return options.publishResult || { code: 0, stdout: '', stderr: '' }
     }
@@ -117,9 +123,81 @@ const tests = [
     assert.strictEqual(result.exitCode, 0)
   }],
   ['failed deprecation does not attempt publishing', async () => {
-    const result = await run({ deprecateCode: 1 })
+    const result = await run({ deprecateResult: { code: 1 } })
     assert.strictEqual(result.commands.length, 1)
     assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm deprecate failed'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['failed deprecation reports stderr and propagates its exit code', async () => {
+    const result = await run({ deprecateResult: { code: 17, stderr: 'npm ERR! EOTP', stdout: 'Deprecating...' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm ERR! EOTP'])
+    assert.strictEqual(result.exitCode, 17)
+  }],
+  ['failed deprecation falls back to stdout', async () => {
+    const result = await run({ deprecateResult: { code: 1, stderr: '', stdout: 'Deprecation failed' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['Deprecation failed'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['deprecation spawn errors take precedence over output', async () => {
+    const result = await run({ deprecateResult: { error: new Error('spawn sh ENOENT'), stderr: 'stderr', stdout: 'stdout' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['Error: spawn sh ENOENT'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['deprecation errors cannot appear successful even with a zero code', async () => {
+    const result = await run({ deprecateResult: { code: 0, error: new Error('Cannot spawn shell') } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['Error: Cannot spawn shell'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['rejected deprecation promises stop before publishing', async () => {
+    const result = await run({ deprecateError: new Error('Cannot spawn shell') })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['Error: Cannot spawn shell'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['synchronous deprecation errors stop before publishing', async () => {
+    const result = await run({ deprecateThrow: new Error('Cannot spawn shell') })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['Error: Cannot spawn shell'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['deprecation signal termination cannot appear successful', async () => {
+    const result = await run({ deprecateResult: { code: null, stderr: '', stdout: '' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm deprecate failed'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['missing deprecation status cannot appear successful', async () => {
+    const result = await run({ deprecateResult: { stderr: '', stdout: '' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm deprecate failed'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['deprecation failures are reported without opting in to publishing', async () => {
+    const result = await run({ publish: false, deprecateResult: { code: 1, stderr: 'npm ERR! EOTP' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm ERR! EOTP'])
+    assert.strictEqual(result.exitCode, 1)
+  }],
+  ['shell-exec default exports report deprecation failures', async () => {
+    const result = await run({ defaultExport: true, deprecateResult: { code: 1, stderr: 'npm ERR! EOTP' } })
+    assert.strictEqual(result.commands.length, 1)
+    assert.deepStrictEqual(result.output, [])
+    assert.deepStrictEqual(result.errors, ['npm ERR! EOTP'])
+    assert.strictEqual(result.exitCode, 1)
   }],
   ['shell-exec default exports can publish successfully', async () => {
     const result = await run({ defaultExport: true })
